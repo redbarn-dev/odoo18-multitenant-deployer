@@ -86,14 +86,17 @@ systemctl start "$SERVICE_NAME"
 mkdir -p "$CADDY_SITE_DIR"
 cat <<EOF > "$CADDY_FILE"
 $DOMAIN {
-    handle_errors {
-        @odoo_down expression `{http.error.status_code} == 502`
-        rewrite @odoo_down /index.html
-        file_server
-        root * /var/www/maintenance
+    @error_5xx {
+        expression `{http.error.status_code} >= 500`
     }
 
-    reverse_proxy localhost:$NEXT_PORT {
+    handle_errors {
+        rewrite @error_5xx /index.html
+        root * /var/www/maintenance
+        file_server
+    }
+
+    reverse_proxy localhost:8070 {
         header_up Connection {>Connection}
         header_up Upgrade {>Upgrade}
     }
