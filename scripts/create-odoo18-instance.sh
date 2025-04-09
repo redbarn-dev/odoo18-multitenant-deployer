@@ -88,7 +88,7 @@ cat <<EOF > "$CADDY_FILE"
 $DOMAIN {
     handle_errors {
         @odoo_down expression `{http.error.status_code} == 502`
-        rewrite @odoo_down /maintenance.html
+        rewrite @odoo_down /index.html
         file_server
         root * /var/www/maintenance
     }
