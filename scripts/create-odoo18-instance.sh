@@ -59,7 +59,7 @@ sed -i "s|^dbfilter *=.*|dbfilter = ^$DBNAME\$|" "$ODOO_CONF_FILE"
 
 cp "$ODOO_SYSTEMD_TEMPLATE" "$SYSTEMD_FILE"
 sed -i "s|odoo18-dbname|$SERVICE_NAME|g" "$SYSTEMD_FILE"
-sed -i "s|\*dbname\*|$DBNAME|g" "$SYSTEMD_FILE"
+# sed -i "s|\*dbname\*|$DBNAME|g" "$SYSTEMD_FILE"
 sed -i "s|/etc/odoo18-dbname.conf|$ODOO_CONF_FILE|" "$SYSTEMD_FILE"
 
 

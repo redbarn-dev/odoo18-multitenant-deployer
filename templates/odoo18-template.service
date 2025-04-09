@@ -4,17 +4,8 @@ SyslogIdentifier=odoo18-dbname
 PermissionsStartOnly=true
 User=odoo18
 Group=odoo18
-ExecStart=/opt/odoo18/odoo18-venv/bin/opentelemetry-instrument --traces_exporter otlp --metrics_exporter otlp --logs_exporter otlp /opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin -c /etc/odoo18-dbname.conf
+ExecStart=/opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin -c /etc/odoo18-dbname.conf
 StandardOutput=journal+console
-
-Environment="OTEL_RESOURCE_ATTRIBUTES=service.name=*dbname*"
-Environment="OTEL_EXPORTER_OTLP_ENDPOINT=https://telemetry.monitor.redbarn.club"
-Environment="OTEL_EXPORTER_OTLP_PROTOCOL=grpc"
-Environment="OTEL_LOG_LEVEL=debug"
-Environment="OTEL_EXPORTER_OTLP_INSECURE=false"
-Environment="OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true"
-Environment="OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=psycopg2"
-
 Restart=always
 RestartSec=10
 TimeoutStartSec=0
