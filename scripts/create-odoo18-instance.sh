@@ -86,18 +86,22 @@ systemctl start "$SERVICE_NAME"
 mkdir -p "$CADDY_SITE_DIR"
 cat <<EOF > "$CADDY_FILE"
 $DOMAIN {
+    # Option 1: Force maintenance mode for all requests
+    # This will show the maintenance page for all requests
+    # Uncomment these lines when you want maintenance mode
+    # error * "Site under maintenance" 503
+    
+    # Error handling for when errors occur (including the forced error above)
     handle_errors {
-        @error_5xx expression `{http.error.status_code} >= 500`
-        rewrite @error_5xx /index.html
         root * /var/www/maintenance
         file_server
     }
-
-    reverse_proxy localhost:8070 {
+    
+    # Your normal reverse proxy configuration
+    reverse_proxy localhost:$NEXT_PORT {
         header_up Connection {>Connection}
         header_up Upgrade {>Upgrade}
     }
-
     encode gzip
 }
 EOF
