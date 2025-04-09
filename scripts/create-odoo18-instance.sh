@@ -62,6 +62,23 @@ sed -i "s|odoo18-dbname|$SERVICE_NAME|g" "$SYSTEMD_FILE"
 sed -i "s|\*dbname\*|$DBNAME|g" "$SYSTEMD_FILE"
 sed -i "s|/etc/odoo18-dbname.conf|$ODOO_CONF_FILE|" "$SYSTEMD_FILE"
 
+
+# Set config file permissions for odoo18
+chown odoo18:odoo18 "$ODOO_CONF_FILE"
+chmod 640 "$ODOO_CONF_FILE"
+
+# Initialize the database and install website module
+# echo "📦 Creating database '$DBNAME' and installing website module..."
+# sudo -u odoo18 /opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin \
+#   -c "$ODOO_CONF_FILE" -d "$DBNAME" -i website --without-demo=all --stop-after-init \
+#   --log-level=debug
+
+# if [ $? -ne 0 ]; then
+#   echo "❌ Failed to initialize database '$DBNAME'."
+#   exit 1
+# fi
+
+
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
 systemctl start "$SERVICE_NAME"
@@ -69,10 +86,18 @@ systemctl start "$SERVICE_NAME"
 mkdir -p "$CADDY_SITE_DIR"
 cat <<EOF > "$CADDY_FILE"
 $DOMAIN {
-    reverse_proxy 0.0.0.0:$NEXT_PORT {
+    handle_errors {
+        @odoo_down expression `{http.error.status_code} == 502`
+        rewrite @odoo_down /maintenance.html
+        file_server
+        root * /var/www/maintenance
+    }
+
+    reverse_proxy localhost:$NEXT_PORT {
         header_up Connection {>Connection}
         header_up Upgrade {>Upgrade}
     }
+
     encode gzip
 }
 EOF
