@@ -86,11 +86,8 @@ systemctl start "$SERVICE_NAME"
 mkdir -p "$CADDY_SITE_DIR"
 cat <<EOF > "$CADDY_FILE"
 $DOMAIN {
-    @error_5xx {
-        expression `{http.error.status_code} >= 500`
-    }
-
     handle_errors {
+        @error_5xx expression `{http.error.status_code} >= 500`
         rewrite @error_5xx /index.html
         root * /var/www/maintenance
         file_server
@@ -104,6 +101,7 @@ $DOMAIN {
     encode gzip
 }
 EOF
+
 
 caddy reload
 
