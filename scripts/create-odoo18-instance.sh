@@ -86,14 +86,9 @@ systemctl start "$SERVICE_NAME"
 mkdir -p "$CADDY_SITE_DIR"
 cat <<EOF > "$CADDY_FILE"
 $DOMAIN {
-    # Option 1: Force maintenance mode for all requests
-    # This will show the maintenance page for all requests
-    # Uncomment these lines when you want maintenance mode
-    # error * "Site under maintenance" 503
-    
-    # Error handling for when errors occur (including the forced error above)
-    handle_errors {
+    handle_errors 5xx {
         root * /var/www/maintenance
+        rewrite * /index.html
         file_server
     }
     
@@ -107,7 +102,7 @@ $DOMAIN {
 EOF
 
 
-caddy reload
+systemctl restart caddy
 
 echo ""
 echo "🎉 Instance '$DBNAME' created successfully!"
