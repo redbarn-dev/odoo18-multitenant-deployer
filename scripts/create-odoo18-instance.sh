@@ -68,15 +68,15 @@ chown odoo18:odoo18 "$ODOO_CONF_FILE"
 chmod 640 "$ODOO_CONF_FILE"
 
 # Initialize the database and install website module
-# echo "📦 Creating database '$DBNAME' and installing website module..."
-# sudo -u odoo18 /opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin \
-#   -c "$ODOO_CONF_FILE" -d "$DBNAME" -i website --without-demo=all --stop-after-init \
-#   --log-level=debug
+echo "📦 Creating database '$DBNAME' and installing website module..."
+sudo -u odoo18 /opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin \
+  -c "$ODOO_CONF_FILE" -d "$DBNAME" -i website --without-demo=all --stop-after-init \
+  --log-level=debug
 
-# if [ $? -ne 0 ]; then
-#   echo "❌ Failed to initialize database '$DBNAME'."
-#   exit 1
-# fi
+if [ $? -ne 0 ]; then
+  echo "❌ Failed to initialize database '$DBNAME'."
+  exit 1
+fi
 
 
 systemctl daemon-reload
