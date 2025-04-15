@@ -1,89 +1,92 @@
 #!/bin/bash
+
+# Help section
 if [[ "$1" == "--help" || -z "$1" ]]; then
   echo ""
-  echo "🛠️  Odoo18 Instance Setup Script"
+  echo "🛠️  Odoo18 Instance Setup Script with Logging"
   echo ""
   echo "Usage:"
   echo "  ./create-odoo18-instance.sh <dbname>"
   echo ""
-  echo "What it does:"
-  echo "  ✔ Creates an Odoo config file from a template"
-  echo "  ✔ Assigns a unique port and random admin password"
-  echo "  ✔ Sets up a systemd service"
-  echo "  ✔ Generates a new Caddy site config"
-  echo "  ✔ Starts the service and reloads Caddy"
-  echo ""
   exit 0
 fi
 
+# Constants
 BASE_PORT=8070
-ODOO_CONF_TEMPLATE="/usr/local/share/odoo18-templates/odoo18-template.conf"
-ODOO_SYSTEMD_TEMPLATE="/usr/local/share/odoo18-templates/odoo18-template.service"
-SYSTEMD_DIR="/etc/systemd/system"
-ODOO_CONF_DIR="/etc"
-CADDY_SITE_DIR="/etc/caddy/sites"
-DOMAIN_SUFFIX=".redbarn.club"
-
 DBNAME="$1"
 SERVICE_NAME="odoo18-$DBNAME"
-ODOO_CONF_FILE="$ODOO_CONF_DIR/odoo18-$DBNAME.conf"
-SYSTEMD_FILE="$SYSTEMD_DIR/$SERVICE_NAME.service"
-CADDY_FILE="$CADDY_SITE_DIR/$DBNAME.caddy"
+ODOO_CONF_TEMPLATE="/usr/local/share/odoo18-templates/odoo18-template.conf"
+ODOO_SYSTEMD_TEMPLATE="/usr/local/share/odoo18-templates/odoo18-template.service"
+ODOO_CONF_FILE="/etc/odoo18-$DBNAME.conf"
+SYSTEMD_FILE="/etc/systemd/system/$SERVICE_NAME.service"
+CADDY_FILE="/etc/caddy/sites/$DBNAME.caddy"
+DOMAIN_SUFFIX=".redbarn.club"
 DOMAIN="${DBNAME}${DOMAIN_SUFFIX}"
+LOG_DIR="/var/log/odoo18"
+LOG_FILE="$LOG_DIR/create-odoo18-instance-$DBNAME.log"
 
+# Setup logging
+mkdir -p "$LOG_DIR"
+touch "$LOG_FILE"
+chmod 644 "$LOG_FILE"
+echo "⏱️ $(date) - Starting creation of instance '$DBNAME'" > "$LOG_FILE"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# Cleanup log on success
+cleanup_log_on_exit() {
+  if [[ $? -eq 0 ]]; then
+    echo "🧹 Cleaning up log file..."
+    rm -f "$LOG_FILE"
+  fi
+}
+trap cleanup_log_on_exit EXIT
+
+# Check if instance already exists
 if [[ -f "$ODOO_CONF_FILE" || -f "$SYSTEMD_FILE" || -f "$CADDY_FILE" ]]; then
   echo "❌ Instance '$DBNAME' already exists."
   exit 1
 fi
 
+# Generate credentials and assign a port
 ADMIN_PASSWD=$(openssl rand -base64 16)
-# Start at base port 8070
-BASE_PORT=8070
-
-# Count current odoo18-* services to determine offset
 INSTANCE_COUNT=$(systemctl list-units --type=service --no-legend "odoo18-*.service" | wc -l)
 NEXT_PORT=$((BASE_PORT + INSTANCE_COUNT))
-
-# Ensure the port isn't already used (paranoia check)
 EXISTING_PORTS=$(grep -rh 'xmlrpc_port' /etc/odoo18-*.conf 2>/dev/null | awk '{print $3}' | sort -n)
 while echo "$EXISTING_PORTS" | grep -q "^$NEXT_PORT$"; do
   ((NEXT_PORT++))
 done
 
-cp "$ODOO_CONF_TEMPLATE" "$ODOO_CONF_FILE"
+# Create config file
+echo "⚙️ Creating config file..."
+cp "$ODOO_CONF_TEMPLATE" "$ODOO_CONF_FILE" || exit 1
 sed -i "s|admin_passwd *=.*|admin_passwd = $ADMIN_PASSWD|" "$ODOO_CONF_FILE"
 sed -i "s|odoo18-dbname.log|odoo18-$DBNAME.log|" "$ODOO_CONF_FILE"
 sed -i "s|db_name *=.*|db_name = $DBNAME|" "$ODOO_CONF_FILE"
 sed -i "s|xmlrpc_port *=.*|xmlrpc_port = $NEXT_PORT|" "$ODOO_CONF_FILE"
 sed -i "s|^dbfilter *=.*|dbfilter = ^$DBNAME\$|" "$ODOO_CONF_FILE"
-
-cp "$ODOO_SYSTEMD_TEMPLATE" "$SYSTEMD_FILE"
-sed -i "s|odoo18-dbname|$SERVICE_NAME|g" "$SYSTEMD_FILE"
-# sed -i "s|\*dbname\*|$DBNAME|g" "$SYSTEMD_FILE"
-sed -i "s|/etc/odoo18-dbname.conf|$ODOO_CONF_FILE|" "$SYSTEMD_FILE"
-
-
-# Set config file permissions for odoo18
 chown odoo18:odoo18 "$ODOO_CONF_FILE"
 chmod 640 "$ODOO_CONF_FILE"
 
-# Initialize the database and install website module
-echo "📦 Creating database '$DBNAME' and installing website module..."
+# Create systemd service
+echo "📜 Setting up systemd service..."
+cp "$ODOO_SYSTEMD_TEMPLATE" "$SYSTEMD_FILE" || exit 1
+sed -i "s|odoo18-dbname|$SERVICE_NAME|g" "$SYSTEMD_FILE"
+sed -i "s|/etc/odoo18-dbname.conf|$ODOO_CONF_FILE|" "$SYSTEMD_FILE"
+
+# Initialize DB
+echo "📦 Creating database '$DBNAME'..."
 sudo -u odoo18 /opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin \
-  -c "$ODOO_CONF_FILE" -d "$DBNAME" -i website --without-demo=all --stop-after-init \
-  --log-level=debug
+  -c "$ODOO_CONF_FILE" -d "$DBNAME" -i website --without-demo=all --stop-after-init --log-level=debug || exit 1
 
-if [ $? -ne 0 ]; then
-  echo "❌ Failed to initialize database '$DBNAME'."
-  exit 1
-fi
-
-
+# Start service
+echo "🔧 Enabling and starting service..."
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
-systemctl start "$SERVICE_NAME"
+systemctl start "$SERVICE_NAME" || exit 1
 
-mkdir -p "$CADDY_SITE_DIR"
+# Create Caddy config
+echo "🌐 Setting up Caddy config..."
+mkdir -p "$(dirname "$CADDY_FILE")"
 cat <<EOF > "$CADDY_FILE"
 $DOMAIN {
     handle_errors 5xx {
@@ -91,8 +94,7 @@ $DOMAIN {
         rewrite * /index.html
         file_server
     }
-    
-    # Your normal reverse proxy configuration
+
     reverse_proxy localhost:$NEXT_PORT {
         header_up Connection {>Connection}
         header_up Upgrade {>Upgrade}
@@ -101,12 +103,14 @@ $DOMAIN {
 }
 EOF
 
+# Restart Caddy
+echo "🔁 Reloading Caddy..."
+systemctl restart caddy || exit 1
 
-systemctl restart caddy
-
+# Final Output
 echo ""
-echo "🎉 Instance '$DBNAME' created successfully!"
-echo "🔗 Access it at: https://$DOMAIN"
+echo "✅ Instance '$DBNAME' created successfully!"
+echo "🔗 URL: https://$DOMAIN"
 echo "🛠 Service: $SERVICE_NAME"
 echo "📦 Port: $NEXT_PORT"
-echo "🔐 Admin password: $ADMIN_PASSWD"
+echo "🔐 Admin Password: $ADMIN_PASSWD"
