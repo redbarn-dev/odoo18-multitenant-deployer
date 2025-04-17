@@ -49,12 +49,20 @@ fi
 
 # Generate credentials and assign a port
 ADMIN_PASSWD=$(openssl rand -base64 16)
-INSTANCE_COUNT=$(systemctl list-units --type=service --no-legend "odoo18-*.service" | wc -l)
-NEXT_PORT=$((BASE_PORT + INSTANCE_COUNT))
-EXISTING_PORTS=$(grep -rh 'xmlrpc_port' /etc/odoo18-*.conf 2>/dev/null | awk '{print $3}' | sort -n)
-while echo "$EXISTING_PORTS" | grep -q "^$NEXT_PORT$"; do
+
+# Determine next available XML-RPC port scoped only to Odoo configs
+echo "🔎 Scanning used Odoo ports..."
+USED_PORTS=$(grep -rh 'xmlrpc_port' /etc/odoo18-*.conf 2>/dev/null | awk '{print $3}' | sort -n)
+
+NEXT_PORT=$BASE_PORT
+
+# Keep incrementing from 8070 until we find a free one
+while echo "$USED_PORTS" | grep -q "^$NEXT_PORT$"; do
   ((NEXT_PORT++))
 done
+
+echo "📦 Assigned port $NEXT_PORT to new instance"
+
 
 # Create config file
 echo "⚙️ Creating config file..."
@@ -75,8 +83,46 @@ sed -i "s|/etc/odoo18-dbname.conf|$ODOO_CONF_FILE|" "$SYSTEMD_FILE"
 
 # Initialize DB
 echo "📦 Creating database '$DBNAME'..."
-sudo -u odoo18 /opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin \
-  -c "$ODOO_CONF_FILE" -d "$DBNAME" -i website --without-demo=all --stop-after-init --log-level=debug || exit 1
+
+# Build the init command
+DB_INIT_CMD="sudo -u odoo18 /opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin \
+  -c \"$ODOO_CONF_FILE\" \
+  -d \"$DBNAME\" \
+  -i base,website \
+  --without-demo=all \
+  --stop-after-init \
+  --log-level=debug"
+
+# Optional: Show live spinner during DB init
+spin() {
+  local -a marks=( '-' '\' '|' '/' )
+  while :; do
+    for m in "${marks[@]}"; do
+      echo -ne "\r⏳ Initializing DB... $m"
+      sleep 0.1
+    done
+  done
+}
+
+spin & SPIN_PID=$!
+
+# Run command and capture result
+eval $DB_INIT_CMD
+EXIT_CODE=$?
+
+# Kill spinner
+kill $SPIN_PID &>/dev/null
+wait $SPIN_PID 2>/dev/null
+echo ""
+
+# Check success
+if [ $EXIT_CODE -ne 0 ]; then
+  echo -e "\n❌ \e[31mDatabase initialization FAILED for '$DBNAME'.\e[0m"
+  echo "👉 Review the full log at: $LOG_FILE"
+  exit $EXIT_CODE
+fi
+
+
 
 # Start service
 echo "🔧 Enabling and starting service..."
