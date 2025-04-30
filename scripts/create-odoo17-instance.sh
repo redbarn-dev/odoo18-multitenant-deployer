@@ -3,10 +3,10 @@
 # Help section
 if [[ "$1" == "--help" || -z "$1" ]]; then
   echo ""
-  echo "🛠️  Odoo18 Instance Setup Script with Logging"
+  echo "🛠️  odoo17 Instance Setup Script with Logging"
   echo ""
   echo "Usage:"
-  echo "  ./create-odoo18-instance.sh <dbname>"
+  echo "  ./create-odoo17-instance.sh <dbname>"
   echo ""
   exit 0
 fi
@@ -14,16 +14,16 @@ fi
 # Constants
 BASE_PORT=8070
 DBNAME="$1"
-SERVICE_NAME="odoo18-$DBNAME"
-ODOO_CONF_TEMPLATE="/usr/local/share/odoo18-templates/odoo18-template.conf"
-ODOO_SYSTEMD_TEMPLATE="/usr/local/share/odoo18-templates/odoo18-template.service"
-ODOO_CONF_FILE="/etc/odoo18-$DBNAME.conf"
+SERVICE_NAME="odoo17-$DBNAME"
+ODOO_CONF_TEMPLATE="/usr/local/share/odoo17-templates/odoo17-template.conf"
+ODOO_SYSTEMD_TEMPLATE="/usr/local/share/odoo17-templates/odoo17-template.service"
+ODOO_CONF_FILE="/etc/odoo17-$DBNAME.conf"
 SYSTEMD_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 CADDY_FILE="/etc/caddy/sites/$DBNAME.caddy"
 DOMAIN_SUFFIX=".redbarn.club"
 DOMAIN="${DBNAME}${DOMAIN_SUFFIX}"
-LOG_DIR="/var/log/odoo18"
-LOG_FILE="$LOG_DIR/create-odoo18-instance-$DBNAME.log"
+LOG_DIR="/var/log/odoo17"
+LOG_FILE="$LOG_DIR/create-odoo17-instance-$DBNAME.log"
 
 # Setup logging
 mkdir -p "$LOG_DIR"
@@ -52,7 +52,7 @@ ADMIN_PASSWD=$(openssl rand -base64 16)
 
 # Determine next available XML-RPC port scoped only to Odoo configs
 echo "🔎 Scanning used Odoo ports..."
-USED_PORTS=$(grep -rh 'xmlrpc_port' /etc/odoo18-*.conf 2>/dev/null | awk '{print $3}' | sort -n)
+USED_PORTS=$(grep -rh 'xmlrpc_port' /etc/odoo17-*.conf 2>/dev/null | awk '{print $3}' | sort -n)
 
 NEXT_PORT=$BASE_PORT
 
@@ -68,24 +68,24 @@ echo "📦 Assigned port $NEXT_PORT to new instance"
 echo "⚙️ Creating config file..."
 cp "$ODOO_CONF_TEMPLATE" "$ODOO_CONF_FILE" || exit 1
 sed -i "s|admin_passwd *=.*|admin_passwd = $ADMIN_PASSWD|" "$ODOO_CONF_FILE"
-sed -i "s|odoo18-dbname.log|odoo18-$DBNAME.log|" "$ODOO_CONF_FILE"
+sed -i "s|odoo17-dbname.log|odoo17-$DBNAME.log|" "$ODOO_CONF_FILE"
 sed -i "s|db_name *=.*|db_name = $DBNAME|" "$ODOO_CONF_FILE"
 sed -i "s|xmlrpc_port *=.*|xmlrpc_port = $NEXT_PORT|" "$ODOO_CONF_FILE"
 sed -i "s|^dbfilter *=.*|dbfilter = ^$DBNAME\$|" "$ODOO_CONF_FILE"
-chown odoo18:odoo18 "$ODOO_CONF_FILE"
+chown odoo17:odoo17 "$ODOO_CONF_FILE"
 chmod 640 "$ODOO_CONF_FILE"
 
 # Create systemd service
 echo "📜 Setting up systemd service..."
 cp "$ODOO_SYSTEMD_TEMPLATE" "$SYSTEMD_FILE" || exit 1
-sed -i "s|odoo18-dbname|$SERVICE_NAME|g" "$SYSTEMD_FILE"
-sed -i "s|/etc/odoo18-dbname.conf|$ODOO_CONF_FILE|" "$SYSTEMD_FILE"
+sed -i "s|odoo17-dbname|$SERVICE_NAME|g" "$SYSTEMD_FILE"
+sed -i "s|/etc/odoo17-dbname.conf|$ODOO_CONF_FILE|" "$SYSTEMD_FILE"
 
 # Initialize DB
 echo "📦 Creating database '$DBNAME'..."
 
 # Build the init command
-DB_INIT_CMD="sudo -u odoo18 /opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin \
+DB_INIT_CMD="sudo -u odoo17 /opt/odoo17/odoo17-venv/bin/python3 /opt/odoo17/odoo17/odoo-bin \
   -c \"$ODOO_CONF_FILE\" \
   -d \"$DBNAME\" \
   -i base,website \

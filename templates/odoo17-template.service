@@ -1,10 +1,10 @@
 [Service]
 Type=simple
-SyslogIdentifier=odoo18-dbname
+SyslogIdentifier=odoo17-dbname
 PermissionsStartOnly=true
-User=odoo18
-Group=odoo18
-ExecStart=/opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin -c /etc/odoo18-dbname.conf
+User=odoo17
+Group=odoo17
+ExecStart=/opt/odoo17/odoo17-venv/bin/python3 /opt/odoo17/odoo17/odoo-bin -c /etc/odoo17-dbname.conf
 StandardOutput=journal+console
 Restart=always
 RestartSec=10

@@ -4,14 +4,14 @@ ACTION=$1
 
 show_help() {
   echo ""
-  echo "🛠️  Usage: odoo18-manager {start|stop|restart|status|list|help}"
+  echo "🛠️  Usage: odoo17-manager {start|stop|restart|status|list|help}"
   echo ""
   echo "Commands:"
-  echo "  start     - Start all odoo18-* services"
-  echo "  stop      - Stop all odoo18-* services"
-  echo "  restart   - Restart all odoo18-* services"
-  echo "  status    - Show detailed status of each odoo18-* service"
-  echo "  list      - List all odoo18-* services with ✅ running or ❌ not running"
+  echo "  start     - Start all odoo17-* services"
+  echo "  stop      - Stop all odoo17-* services"
+  echo "  restart   - Restart all odoo17-* services"
+  echo "  status    - Show detailed status of each odoo17-* service"
+  echo "  list      - List all odoo17-* services with ✅ running or ❌ not running"
   echo "  help      - Show this help message"
   echo ""
 }
@@ -22,7 +22,7 @@ if [[ -z "$ACTION" || "$ACTION" == "help" ]]; then
   exit 0
 fi
 
-SERVICES=$(systemctl list-unit-files | grep '^odoo18-.*\.service' | awk '{print $1}')
+SERVICES=$(systemctl list-unit-files | grep '^odoo17-.*\.service' | awk '{print $1}')
 
 # Handle list command
 if [[ "$ACTION" == "list" ]]; then
