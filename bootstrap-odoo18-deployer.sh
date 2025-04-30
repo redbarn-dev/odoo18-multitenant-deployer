@@ -35,6 +35,13 @@ if ! grep -qF "$IMPORT_LINE" /etc/caddy/Caddyfile; then
     echo "✅ Added 'import sites/*.caddy' to Caddyfile"
 fi
 
+#5. Install Delete Script 
+
+# 3. Install deletion script
+sudo install -m 755 "$CLONE_DIR/scripts/delete-odoo18-instance.sh" /usr/local/bin/delete-odoo18-instance
+echo "🗑️  Delete script installed"
+
+
 echo ""
 echo "🎉 Setup complete! Now you can run:"
 echo "   sudo create-odoo18-instance <yourdbname>"
