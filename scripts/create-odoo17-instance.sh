@@ -85,42 +85,42 @@ sed -i "s|/etc/odoo17-dbname.conf|$ODOO_CONF_FILE|" "$SYSTEMD_FILE"
 echo "📦 Creating database '$DBNAME'..."
 
 # Build the init command
-DB_INIT_CMD="sudo -u odoo17 /opt/odoo17/odoo17-venv/bin/python3 /opt/odoo17/odoo17/odoo-bin \
-  -c \"$ODOO_CONF_FILE\" \
-  -d \"$DBNAME\" \
-  -i base,website \
-  --without-demo=all \
-  --stop-after-init \
-  --log-level=debug"
+# DB_INIT_CMD="sudo -u odoo17 /opt/odoo17/odoo17-venv/bin/python3 /opt/odoo17/odoo17/odoo-bin \
+#   -c \"$ODOO_CONF_FILE\" \
+#   -d \"$DBNAME\" \
+#   -i base,website \
+#   --without-demo=all \
+#   --stop-after-init \
+#   --log-level=debug"
 
 # Optional: Show live spinner during DB init
-spin() {
-  local -a marks=( '-' '\' '|' '/' )
-  while :; do
-    for m in "${marks[@]}"; do
-      echo -ne "\r⏳ Initializing DB... $m"
-      sleep 0.1
-    done
-  done
-}
+# spin() {
+#   local -a marks=( '-' '\' '|' '/' )
+#   while :; do
+#     for m in "${marks[@]}"; do
+#       echo -ne "\r⏳ Initializing DB... $m"
+#       sleep 0.1
+#     done
+#   done
+# }
 
-spin & SPIN_PID=$!
+# spin & SPIN_PID=$!
 
 # Run command and capture result
-eval $DB_INIT_CMD
-EXIT_CODE=$?
+# eval $DB_INIT_CMD
+# EXIT_CODE=$?
 
 # Kill spinner
-kill $SPIN_PID &>/dev/null
-wait $SPIN_PID 2>/dev/null
-echo ""
+# kill $SPIN_PID &>/dev/null
+# wait $SPIN_PID 2>/dev/null
+# echo ""
 
 # Check success
-if [ $EXIT_CODE -ne 0 ]; then
-  echo -e "\n❌ \e[31mDatabase initialization FAILED for '$DBNAME'.\e[0m"
-  echo "👉 Review the full log at: $LOG_FILE"
-  exit $EXIT_CODE
-fi
+# if [ $EXIT_CODE -ne 0 ]; then
+#   echo -e "\n❌ \e[31mDatabase initialization FAILED for '$DBNAME'.\e[0m"
+#   echo "👉 Review the full log at: $LOG_FILE"
+#   exit $EXIT_CODE
+# fi
 
 
 
