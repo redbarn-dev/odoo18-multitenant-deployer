@@ -1,12 +1,13 @@
 #!/bin/bash
 set -e
 
-REPO_URL="https://github.com/RBTG-WebProduct/odoo17-multitenant-deployer"
+REPO_URL="https://github.com/RBTG-WebProduct/odoo18-multitenant-deployer"
 CLONE_DIR="/tmp/odoo17-deployer"
 
-echo "📥 Cloning deployer repo..."
+echo "📥 Cloning deployer repo (branch 17.0)..."
 rm -rf "$CLONE_DIR"
-git clone "$REPO_URL" "$CLONE_DIR"
+git clone --branch 17.0 "$REPO_URL" "$CLONE_DIR"
+
 
 echo "🚀 Installing odoo17-multitenant-deployer..."
 
