@@ -144,6 +144,7 @@ $DOMAIN {
     reverse_proxy localhost:$NEXT_PORT {
         header_up Connection {>Connection}
         header_up Upgrade {>Upgrade}
+        header_down -Server
     }
     encode gzip
 }
