@@ -1,25 +1,25 @@
 #!/bin/bash
 set -e
 
-REPO_URL="https://github.com/RBTG-WebProduct/odoo18-multitenant-deployer"
-CLONE_DIR="/tmp/odoo18-deployer"
+REPO_URL="https://github.com/RBTG-WebProduct/odoo19-multitenant-deployer"
+CLONE_DIR="/tmp/odoo19-deployer"
 
 echo "📥 Cloning deployer repo..."
 rm -rf "$CLONE_DIR"
 git clone "$REPO_URL" "$CLONE_DIR"
 
-echo "🚀 Installing odoo18-multitenant-deployer..."
+echo "🚀 Installing odoo19-multitenant-deployer..."
 
 # 1. Install main instance creation script
-sudo install -m 755 "$CLONE_DIR/scripts/create-odoo18-instance.sh" /usr/local/bin/create-odoo18-instance
+sudo install -m 755 "$CLONE_DIR/scripts/create-odoo19-instance.sh" /usr/local/bin/create-odoo19-instance
 
 # 2. Install instance manager
-sudo install -m 755 "$CLONE_DIR/scripts/odoo18-manager.sh" /usr/local/bin/odoo18-manager
+sudo install -m 755 "$CLONE_DIR/scripts/odoo19-manager.sh" /usr/local/bin/odoo19-manager
 
 # 3. Install config and systemd templates
-sudo mkdir -p /usr/local/share/odoo18-templates/
-sudo cp "$CLONE_DIR/templates/"*.conf /usr/local/share/odoo18-templates/
-sudo cp "$CLONE_DIR/templates/"*.service /usr/local/share/odoo18-templates/
+sudo mkdir -p /usr/local/share/odoo19-templates/
+sudo cp "$CLONE_DIR/templates/"*.conf /usr/local/share/odoo19-templates/
+sudo cp "$CLONE_DIR/templates/"*.service /usr/local/share/odoo19-templates/
 echo "✅ Templates installed"
 
 # 4. Caddy setup
@@ -38,12 +38,12 @@ fi
 #5. Install Delete Script 
 
 # 3. Install deletion script
-sudo install -m 755 "$CLONE_DIR/scripts/delete-odoo18-instance.sh" /usr/local/bin/delete-odoo18-instance
+sudo install -m 755 "$CLONE_DIR/scripts/delete-odoo19-instance.sh" /usr/local/bin/delete-odoo19-instance
 echo "🗑️  Delete script installed"
 
 
 echo ""
 echo "🎉 Setup complete! Now you can run:"
-echo "   sudo create-odoo18-instance <yourdbname>"
-echo "   odoo18-manager status"
+echo "   sudo create-odoo19-instance <yourdbname>"
+echo "   odoo19-manager status"
 echo ""

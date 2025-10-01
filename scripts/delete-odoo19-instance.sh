@@ -1,16 +1,16 @@
 #!/bin/bash
 
 DBNAME="$1"
-SERVICE_NAME="odoo18-$DBNAME"
-ODOO_CONF_FILE="/etc/odoo18-$DBNAME.conf"
+SERVICE_NAME="odoo19-$DBNAME"
+ODOO_CONF_FILE="/etc/odoo19-$DBNAME.conf"
 SYSTEMD_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 CADDY_FILE="/etc/caddy/sites/$DBNAME.caddy"
-LOG_FILE="/var/log/odoo18/odoo18-$DBNAME.log"
+LOG_FILE="/var/log/odoo19/odoo19-$DBNAME.log"
 
 # Safety check
 if [[ -z "$DBNAME" ]]; then
   echo "❌ Please specify an instance name to delete."
-  echo "Usage: sudo delete-odoo18-instance myclient"
+  echo "Usage: sudo delete-odoo19-instance myclient"
   exit 1
 fi
 
@@ -46,6 +46,6 @@ systemctl restart caddy
 
 # Drop the PostgreSQL database
 echo "🗑️ Dropping PostgreSQL database '$DBNAME'..."
-sudo -u odoo18 dropdb "$DBNAME"
+sudo -u odoo19 dropdb "$DBNAME"
 
 echo "✅ Instance '$DBNAME' deleted successfully."
