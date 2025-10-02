@@ -52,7 +52,7 @@ ADMIN_PASSWD=$(openssl rand -base64 16)
 
 # Determine next available XML-RPC port scoped only to Odoo configs
 echo "🔎 Scanning used Odoo ports..."
-USED_PORTS=$(grep -rh 'xmlrpc_port' /etc/odoo19-*.conf 2>/dev/null | awk '{print $3}' | sort -n)
+USED_PORTS=$(grep -rh 'http_port' /etc/odoo19-*.conf 2>/dev/null | awk '{print $3}' | sort -n)
 
 NEXT_PORT=$BASE_PORT
 
@@ -70,7 +70,8 @@ cp "$ODOO_CONF_TEMPLATE" "$ODOO_CONF_FILE" || exit 1
 sed -i "s|admin_passwd *=.*|admin_passwd = $ADMIN_PASSWD|" "$ODOO_CONF_FILE"
 sed -i "s|odoo19-dbname.log|odoo19-$DBNAME.log|" "$ODOO_CONF_FILE"
 sed -i "s|db_name *=.*|db_name = $DBNAME|" "$ODOO_CONF_FILE"
-sed -i "s|xmlrpc_port *=.*|xmlrpc_port = $NEXT_PORT|" "$ODOO_CONF_FILE"
+sed -i "s|http_port *=.*|http_port = $NEXT_PORT|" "$ODOO_CONF_FILE"
+sed -i "s|longpolling_port *=.*|longpolling_port = $NEXT_PORT|" "$ODOO_CONF_FILE"
 sed -i "s|^dbfilter *=.*|dbfilter = ^$DBNAME\$|" "$ODOO_CONF_FILE"
 chown odoo19:odoo19 "$ODOO_CONF_FILE"
 chmod 640 "$ODOO_CONF_FILE"
@@ -135,18 +136,38 @@ echo "🌐 Setting up Caddy config..."
 mkdir -p "$(dirname "$CADDY_FILE")"
 cat <<EOF > "$CADDY_FILE"
 $DOMAIN {
+    encode gzip
+
+    # Serve maintenance page on 5xx errors
     handle_errors 5xx {
         root * /var/www/maintenance
         rewrite * /index.html
         file_server
     }
 
-    reverse_proxy localhost:$NEXT_PORT {
-        header_up Connection {>Connection}
+    # Match longpolling route used by Odoo for real-time features
+    @longpolling {
+        path /longpolling/*
+    }
+
+    # WebSocket reverse proxy for longpolling
+    reverse_proxy @longpolling 127.0.0.1:$NEXT_PORT {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up Connection "upgrade"
         header_up Upgrade {>Upgrade}
+    }
+
+    # Default reverse proxy for normal HTTP traffic
+    reverse_proxy 127.0.0.1:$NEXT_PORT {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
         header_down -Server
     }
-    encode gzip
 }
 EOF
 
