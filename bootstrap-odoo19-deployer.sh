@@ -33,6 +33,9 @@ sudo cp "$CLONE_DIR/templates/maintenance.html" /var/www/maintenance/index.html
 sudo chmod 644 /var/www/maintenance/index.html
 echo "✅ Maintenance page deployed at /var/www/maintenance/index.html"
 
+sudo cp "$CLONE_DIR/templates/logrotate" /etc/logrotate.d/odoo19
+echo "✅ Logrotate config installed at /etc/logrotate.d/odoo19"
+
 # 6. Caddy setup
 sudo mkdir -p /etc/caddy/sites/
 if [ ! -f /etc/caddy/Caddyfile ]; then
