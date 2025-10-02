@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO_URL="https://github.com/RBTG-WebProduct/odoo19-multitenant-deployer"
+REPO_URL="https://github.com/redbarn-dev/odoo18-multitenant-deployer"
 CLONE_DIR="/tmp/odoo19-deployer"
 
 echo "📥 Cloning deployer repo..."
