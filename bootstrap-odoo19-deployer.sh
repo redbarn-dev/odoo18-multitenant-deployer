@@ -6,7 +6,8 @@ CLONE_DIR="/tmp/odoo19-deployer"
 
 echo "📥 Cloning deployer repo..."
 rm -rf "$CLONE_DIR"
-git clone "$REPO_URL" "$CLONE_DIR"
+git clone --branch 19.0 "$REPO_URL" "$CLONE_DIR"
+
 
 echo "🚀 Installing odoo19-multitenant-deployer..."
 
