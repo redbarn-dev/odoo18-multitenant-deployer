@@ -50,15 +50,24 @@ fi
 # Generate credentials and assign a port
 ADMIN_PASSWD=$(openssl rand -base64 16)
 
-# Determine next available XML-RPC port scoped only to Odoo configs
-echo "🔎 Scanning used Odoo ports..."
-USED_PORTS=$(grep -rh 'xmlrpc_port' /etc/odoo18-*.conf 2>/dev/null | awk '{print $3}' | sort -n)
-
+# Find next available port by checking both configs AND actual port binding
+echo "🔎 Scanning for available port..."
 NEXT_PORT=$BASE_PORT
-
-# Keep incrementing from 8070 until we find a free one
-while echo "$USED_PORTS" | grep -q "^$NEXT_PORT$"; do
-  ((NEXT_PORT++))
+while true; do
+  # Check if port is in any config file
+  if grep -rq "xmlrpc_port[[:space:]]*=[[:space:]]*$NEXT_PORT" /etc/odoo18-*.conf 2>/dev/null; then
+    ((NEXT_PORT++))
+    continue
+  fi
+  
+  # Check if port is actually in use on the system
+  if ss -tuln | grep -q ":$NEXT_PORT "; then
+    ((NEXT_PORT++))
+    continue
+  fi
+  
+  # Port is free
+  break
 done
 
 echo "📦 Assigned port $NEXT_PORT to new instance"
