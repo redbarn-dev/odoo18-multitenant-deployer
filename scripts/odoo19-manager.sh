@@ -4,14 +4,14 @@ ACTION=$1
 
 show_help() {
   echo ""
-  echo "🛠️  Usage: odoo18-manager {start|stop|restart|status|list|install-module|help}"
+  echo "🛠️  Usage: odoo19-manager {start|stop|restart|status|list|install-module|help}"
   echo ""
   echo "Commands:"
-  echo "  start            - Start all odoo18-* services"
-  echo "  stop             - Stop all odoo18-* services"
-  echo "  restart          - Restart all odoo18-* services"
-  echo "  status           - Show detailed status of each odoo18-* service"
-  echo "  list             - List all odoo18-* services with ✅ running or ❌ not running"
+  echo "  start            - Start all odoo19-* services"
+  echo "  stop             - Stop all odoo19-* services"
+  echo "  restart          - Restart all odoo19-* services"
+  echo "  status           - Show detailed status of each odoo19-* service"
+  echo "  list             - List all odoo19-* services with ✅ running or ❌ not running"
   echo "  install-module   - Interactively install or upgrade a module on one or all databases"
   echo "  help             - Show this help message"
   echo ""
@@ -35,11 +35,11 @@ done
 
 if [[ $VALID -eq 0 ]]; then
   echo "❌ Unknown command: '$ACTION'"
-  echo "Run 'odoo18-manager help' to see available commands."
+  echo "Run 'odoo19-manager help' to see available commands."
   exit 1
 fi
 
-SERVICES=$(systemctl list-unit-files | grep '^odoo18-.*\.service' | awk '{print $1}')
+SERVICES=$(systemctl list-unit-files | grep '^odoo19-.*\.service' | awk '{print $1}')
 
 # Handle list command
 if [[ "$ACTION" == "list" ]]; then
@@ -62,9 +62,9 @@ if [[ "$ACTION" == "install-module" ]]; then
     exit 1
   fi
 
-  MODULE_PATH="/opt/odoo18/custom-addons/$MODULE"
+  MODULE_PATH="/opt/odoo19/custom-addons/$MODULE"
   if [[ ! -d "$MODULE_PATH" ]]; then
-    echo "❌ Module '$MODULE' not found in /opt/odoo18/custom-addons/"
+    echo "❌ Module '$MODULE' not found in /opt/odoo19/custom-addons/"
     exit 2
   fi
 
@@ -84,10 +84,10 @@ if [[ "$ACTION" == "install-module" ]]; then
       ;;
   esac
 
-  ODOO_BIN="/opt/odoo18/odoo18/odoo-bin"
-  PYTHON="/opt/odoo18/odoo18-venv/bin/python3"
+  ODOO_BIN="/opt/odoo19/odoo19/odoo-bin"
+  PYTHON="/opt/odoo19/odoo19-venv/bin/python3"
 
-  for CONF in /etc/odoo18-*.conf; do
+  for CONF in /etc/odoo19-*.conf; do
     DBNAME=$(grep '^db_name' "$CONF" | awk '{print $3}')
     BASENAME=$(basename "$CONF" .conf)
     SERVICE_NAME="$BASENAME.service"
@@ -106,7 +106,7 @@ if [[ "$ACTION" == "install-module" ]]; then
       CMD="$PYTHON $ODOO_BIN -c $CONF -d $DBNAME -u $MODULE --without-demo=all --stop-after-init"
     fi
 
-    sudo -u odoo18 bash -c "$CMD"
+    sudo -u odoo19 bash -c "$CMD"
     if [[ $? -eq 0 ]]; then
       echo "✅ Success for $DBNAME"
     else
