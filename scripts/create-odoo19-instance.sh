@@ -27,7 +27,10 @@ LOG_FILE="$LOG_DIR/create-odoo19-instance-$DBNAME.log"
 
 # Setup logging
 mkdir -p "$LOG_DIR"
+chown odoo19:odoo19 "$LOG_DIR"
+chmod 755 "$LOG_DIR"
 touch "$LOG_FILE"
+chown odoo19:odoo19 "$LOG_FILE"
 chmod 644 "$LOG_FILE"
 echo "⏱️ $(date) - Starting creation of instance '$DBNAME'" > "$LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1
