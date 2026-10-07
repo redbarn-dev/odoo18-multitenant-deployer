@@ -4,7 +4,7 @@ ACTION=$1
 
 show_help() {
   echo ""
-  echo "🛠️  Usage: odoo18-manager {start|stop|restart|status|list|install-module|help}"
+  echo "🛠️  Usage: odoo18-manager {start|stop|restart|status|list|install-module|update-addons|help}"
   echo ""
   echo "Commands:"
   echo "  start            - Start all odoo18-* services"
@@ -13,6 +13,8 @@ show_help() {
   echo "  status           - Show detailed status of each odoo18-* service"
   echo "  list             - List all odoo18-* services with ✅ running or ❌ not running"
   echo "  install-module   - Interactively install or upgrade a module on one or all databases"
+  echo "  update-addons    - Add any missing template addons_path entries to every /etc/odoo18-*.conf"
+  echo "                     (use 'update-addons --dry-run' to preview changes)"
   echo "  help             - Show this help message"
   echo ""
 }
@@ -24,7 +26,7 @@ if [[ -z "$ACTION" || "$ACTION" == "help" ]]; then
 fi
 
 # Validate allowed commands - Better approach with direct array matching
-VALID_COMMANDS=("start" "stop" "restart" "status" "list" "install-module" "help")
+VALID_COMMANDS=("start" "stop" "restart" "status" "list" "install-module" "update-addons" "help")
 VALID=0
 for cmd in "${VALID_COMMANDS[@]}"; do
   if [[ "$ACTION" == "$cmd" ]]; then
@@ -119,6 +121,110 @@ if [[ "$ACTION" == "install-module" ]]; then
   done
 
   echo "🎉 Finished '$MODE' for module '$MODULE'"
+  exit 0
+fi
+
+# Handle update-addons command
+if [[ "$ACTION" == "update-addons" ]]; then
+  DRY_RUN=0
+  [[ "$2" == "--dry-run" ]] && DRY_RUN=1
+
+  TEMPLATE="/usr/local/share/odoo18-templates/odoo18-template.conf"
+  if [[ ! -f "$TEMPLATE" ]]; then
+    echo "❌ Template not found: $TEMPLATE"
+    exit 1
+  fi
+
+  # Required paths come from the installed template's addons_path
+  REQUIRED=$(grep -E '^[[:space:]]*addons_path[[:space:]]*=' "$TEMPLATE" | head -1 | cut -d= -f2- | tr -d '[:space:]')
+  if [[ -z "$REQUIRED" ]]; then
+    echo "❌ No addons_path found in $TEMPLATE"
+    exit 1
+  fi
+  IFS=',' read -ra REQUIRED_PATHS <<< "$REQUIRED"
+
+  # Odoo refuses to start if an addons_path entry doesn't exist, so verify all dirs before touching any config
+  VALID_PATHS=()
+  MISSING_PATHS=()
+  for P in "${REQUIRED_PATHS[@]}"; do
+    if [[ -d "$P" ]]; then
+      VALID_PATHS+=("${P%/}")
+    else
+      MISSING_PATHS+=("$P")
+    fi
+  done
+
+  if [[ ${#MISSING_PATHS[@]} -gt 0 ]]; then
+    echo "❌ The following addons directories do not exist on this server:"
+    for P in "${MISSING_PATHS[@]}"; do
+      echo "   - $P"
+    done
+    echo "Create or clone them first, then re-run. No configs were changed."
+    exit 1
+  fi
+
+  CHANGED_SERVICES=()
+  for CONF in /etc/odoo18-*.conf; do
+    [[ -f "$CONF" ]] || continue
+
+    CURRENT=$(grep -E '^[[:space:]]*addons_path[[:space:]]*=' "$CONF" | head -1 | cut -d= -f2- | tr -d '[:space:]')
+    NEW="$CURRENT"
+
+    # Append each required path not already present (ignoring trailing slashes)
+    NORMALIZED=",$(echo "$CURRENT" | sed 's|/,|,|g; s|/$||'),"
+    for P in "${VALID_PATHS[@]}"; do
+      if [[ "$NORMALIZED" != *",$P,"* ]]; then
+        NEW="${NEW:+$NEW,}$P"
+        NORMALIZED="$NORMALIZED$P,"
+      fi
+    done
+
+    if [[ "$NEW" == "$CURRENT" ]]; then
+      echo "✅ $CONF is up to date"
+      continue
+    fi
+
+    echo "🔧 $CONF"
+    echo "   old: ${CURRENT:-<none>}"
+    echo "   new: $NEW"
+
+    if [[ $DRY_RUN -eq 1 ]]; then
+      continue
+    fi
+
+    cp -p "$CONF" "$CONF.bak.$(date +%Y%m%d%H%M%S)"
+    if grep -qE '^[[:space:]]*addons_path[[:space:]]*=' "$CONF"; then
+      sed -i "s|^[[:space:]]*addons_path[[:space:]]*=.*|addons_path = $NEW|" "$CONF"
+    else
+      sed -i "/^\[options\]/a addons_path = $NEW" "$CONF"
+    fi
+    CHANGED_SERVICES+=("$(basename "$CONF" .conf).service")
+  done
+
+  if [[ $DRY_RUN -eq 1 ]]; then
+    echo "ℹ️  Dry run — no files were changed."
+    exit 0
+  fi
+
+  if [[ ${#CHANGED_SERVICES[@]} -eq 0 ]]; then
+    echo "🎉 All configs already include the required addons paths."
+    exit 0
+  fi
+
+  echo ""
+  echo "📝 Updated ${#CHANGED_SERVICES[@]} config(s). Backups saved alongside as *.conf.bak.<timestamp>"
+  read -p "🔁 Restart the affected services now? [y/N] " RESTART
+  if [[ "$RESTART" =~ ^[yY]$ ]]; then
+    for svc in "${CHANGED_SERVICES[@]}"; do
+      if systemctl restart "$svc"; then
+        echo "✅ $svc restarted"
+      else
+        echo "❌ $svc restart failed"
+      fi
+    done
+  else
+    echo "ℹ️  Changes take effect on next restart (odoo18-manager restart)."
+  fi
   exit 0
 fi
 
