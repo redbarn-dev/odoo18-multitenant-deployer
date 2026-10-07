@@ -143,15 +143,25 @@ if [[ "$ACTION" == "update-addons" ]]; then
   fi
   IFS=',' read -ra REQUIRED_PATHS <<< "$REQUIRED"
 
-  # Odoo refuses to start if an addons_path entry doesn't exist, so skip missing dirs
+  # Odoo refuses to start if an addons_path entry doesn't exist, so verify all dirs before touching any config
   VALID_PATHS=()
+  MISSING_PATHS=()
   for P in "${REQUIRED_PATHS[@]}"; do
     if [[ -d "$P" ]]; then
       VALID_PATHS+=("${P%/}")
     else
-      echo "⚠️  Skipping '$P' — directory does not exist on this server"
+      MISSING_PATHS+=("$P")
     fi
   done
+
+  if [[ ${#MISSING_PATHS[@]} -gt 0 ]]; then
+    echo "❌ The following addons directories do not exist on this server:"
+    for P in "${MISSING_PATHS[@]}"; do
+      echo "   - $P"
+    done
+    echo "Create or clone them first, then re-run. No configs were changed."
+    exit 1
+  fi
 
   CHANGED_SERVICES=()
   for CONF in /etc/odoo19-*.conf; do
